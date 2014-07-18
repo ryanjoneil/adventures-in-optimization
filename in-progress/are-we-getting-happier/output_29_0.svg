@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:gadfly="http://www.gadflyjl.org/ns"
+     version="1.2"
+     width="240mm" height="120mm" viewBox="0 0 240 120"
+     stroke="none"
+     fill="#000000"
+     stroke-width="0.3"
+>
+<g class="plotroot yscalable" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-1">
+  <g font-size="3.88" font-family="'PT Sans','Helvetica Neue','Helvetica',sans-serif" fill="#564A55" stroke="none" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-2">
+    <text x="131.88" y="113" text-anchor="middle">Day of the Week</text>
+  </g>
+  <g class="guide xlabels" font-size="2.82" font-family="'PT Sans Caption','Helvetica Neue','Helvetica',sans-serif" fill="#6C606B" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-3">
+    <text x="43.49" y="104.74" text-anchor="middle">Sun</text>
+    <text x="72.95" y="104.74" text-anchor="middle">Mon</text>
+    <text x="102.42" y="104.74" text-anchor="middle">Tues</text>
+    <text x="131.88" y="104.74" text-anchor="middle">Wed</text>
+    <text x="161.34" y="104.74" text-anchor="middle">Thurs</text>
+    <text x="190.81" y="104.74" text-anchor="middle">Fri</text>
+    <text x="220.27" y="104.74" text-anchor="middle">Sat</text>
+  </g>
+  <g font-size="3.88" font-family="'PT Sans','Helvetica Neue','Helvetica',sans-serif" fill="#564A55" stroke="none" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-4">
+    <text x="9.63" y="57.61" text-anchor="middle" dy="0.35em" transform="rotate(-90, 9.63, 57.61)">Hedonomoeter.org Units</text>
+  </g>
+  <g clip-path="url(#fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-6)" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-5">
+    <g pointer-events="visible" opacity="1" fill="none" stroke="none" class="guide background" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-7">
+      <rect x="28.76" y="14.26" width="206.24" height="86.7"/>
+    </g>
+    <g class="guide ygridlines xfixed" stroke-dasharray="0.5,0.5" stroke-width="0.2" stroke="#D0D0E0" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-8">
+      <path d="M28.76,98.96 L 235 98.96"/>
+      <path d="M28.76,78.29 L 235 78.29"/>
+      <path d="M28.76,57.61 L 235 57.61"/>
+      <path d="M28.76,36.93 L 235 36.93"/>
+      <path d="M28.76,16.26 L 235 16.26"/>
+    </g>
+    <g class="guide xgridlines yfixed" stroke-dasharray="0.5,0.5" stroke-width="0.2" stroke="#D0D0E0" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-9">
+      <path d="M58.22,14.26 L 58.22 100.96"/>
+      <path d="M87.68,14.26 L 87.68 100.96"/>
+      <path d="M117.15,14.26 L 117.15 100.96"/>
+      <path d="M146.61,14.26 L 146.61 100.96"/>
+      <path d="M176.07,14.26 L 176.07 100.96"/>
+      <path d="M205.54,14.26 L 205.54 100.96"/>
+    </g>
+    <g class="plotpanel" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-10">
+      <g stroke-width="0.3" fill="none" class="geometry" stroke="#00BFFF" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-11">
+        <path d="M43.49,44.87 L 72.95 78.02 102.42 95.81 131.88 84.83 161.34 53.35 190.81 25.08 220.27 21.31"/>
+      </g>
+      <g class="geometry" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-12">
+        <g class="color_LCHab(70.0,60.0,240.0)" stroke="#FFFFFF" stroke-width="0.3" fill="#00BFFF" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-13">
+          <circle cx="43.49" cy="44.87" r="0.9"/>
+          <circle cx="72.95" cy="78.02" r="0.9"/>
+          <circle cx="102.42" cy="95.81" r="0.9"/>
+          <circle cx="131.88" cy="84.83" r="0.9"/>
+          <circle cx="161.34" cy="53.35" r="0.9"/>
+          <circle cx="190.81" cy="25.08" r="0.9"/>
+          <circle cx="220.27" cy="21.31" r="0.9"/>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g class="guide ylabels" font-size="2.82" font-family="'PT Sans Caption','Helvetica Neue','Helvetica',sans-serif" fill="#6C606B" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-14">
+    <text x="27.76" y="98.96" text-anchor="end" dy="0.35em">-0.02</text>
+    <text x="27.76" y="78.29" text-anchor="end" dy="0.35em">-0.01</text>
+    <text x="27.76" y="57.61" text-anchor="end" dy="0.35em">0.00</text>
+    <text x="27.76" y="36.93" text-anchor="end" dy="0.35em">0.01</text>
+    <text x="27.76" y="16.26" text-anchor="end" dy="0.35em">0.02</text>
+  </g>
+  <g font-size="3.88" font-family="'PT Sans','Helvetica Neue','Helvetica',sans-serif" fill="#564A55" stroke="none" id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-15">
+    <text x="131.88" y="12.26" text-anchor="middle">Variation in Happiness on Twitter Due to Day of the Week</text>
+  </g>
+</g>
+<defs>
+<clipPath id="fig-6f62ed7087ce4cf1901e8531b49f9fd9-element-6">
+  <path d="M28.76,14.26 L 235 14.26 235 100.96 28.76 100.96" />
+</clipPath
+></defs>
+</svg>
