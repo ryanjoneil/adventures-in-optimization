@@ -2340,7 +2340,7 @@ colorGradient = Scale.lab_gradient<span style="color: #009900;">&#40;</span>colo
 </svg>
 
 
-<p>The data looks right, so we're off to a good start. Now we have to think about what sort of components we believe are important actors to this index. We'll start with the same ones as in the Vanderbei model:</p>
+<p>The data looks right, so we're off to a good start. Now we have to think about what sort of components we believe are important factors to this index. We'll start with the same ones as in the Vanderbei model:</p>
 
 <ul>
     <li>A linear happiness trend describing how our overall happiness changes over time.</li>
@@ -2348,11 +2348,11 @@ colorGradient = Scale.lab_gradient<span style="color: #009900;">&#40;</span>colo
     <li>Solar cycle trends.</li>
 </ul>
 
-<p>We'll add to this weekly trends, as zooming into the data shows we tend to happier on the weekends than on work days. In the next section we'll build a model to separate out the effects of these trends on the Hedonometer.org index.</p>
+<p>We'll add to this weekly trends, as zooming into the data shows we tend to be happier on the weekends than on work days. In the next section we'll build a model to separate out the effects of these trends on the Hedonometer.org index.</p>
 
 <h4>Model</h4>
 
-<p>Vanderbei's model analyzes daily temperature data for a particular location using <a href="http://en.wikipedia.org/wiki/Least_absolute_deviations">least absolute deviations</a> (LAD). This is similar to the well-known <a href="http://en.wikipedia.org/wiki/Least_squares">least squares approach</a>, but while the latter penalizes the model quadratically more for bigger errors, the former does not. In mathematical notation, the least squares model takes in a known $m \times n$ matrix $A$ and $m \times 1$ vector $y$ of observed data, then searches for a vector $x$ such that $Ax = \hat{y}$ and $\left\lVert y - \hat{y} \right\rVert_2^2$ is minimized.</p>
+<p>Vanderbei's model analyzes daily temperature data for a particular location using <a href="http://en.wikipedia.org/wiki/Least_absolute_deviations">least absolute deviations</a> (LAD). This is similar to the well-known <a href="http://en.wikipedia.org/wiki/Least_squares">least squares approach</a>, but while the latter penalizes the model quadratically more for bigger errors, the former does not. In mathematical notation, the least squares model takes in a known $m \times n$ matrix $A$ and $m \times 1$ vector $y$ of observed data, then searches for a vector $x$ such that $Ax = \hat{y}$ and $\sum_i \left\lVert y_i - \hat{y}_i \right\rVert_2^2$ is minimized.</p>
 
 <p>The LAD model is similar in that it takes in the same data, but instead of minimizing the sum of the squared $L^2$ norms, it minimizes the sum of the $L^1$ norms. Thus we penalize our model using simply the absolute values of its errors instead of their squares. This makes the LAD model more <em>robust</em>, that is, less sensitive to outliers in our input data.</p>
 
