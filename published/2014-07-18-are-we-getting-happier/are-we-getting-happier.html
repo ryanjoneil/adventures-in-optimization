@@ -8,12 +8,15 @@
 
 <p>This post examines another approach. It follows the structure of <a href="<http://www.princeton.edu/vanderbei/">Robert Vanderbei</a>'s excellent "<a href="http://epubs.siam.org/doi/pdf/10.1137/110827296">Local Warming</a>" project to separate out the Hedonometer averages into daily, seasonal, solar, and day-of-the-week trends. We'll be using <a href="http://julialang.org/">Julia</a> v0.2 with <a href="https://github.com/JuliaOpt/JuMP.jl">JuMP</a> and <a href="http://www.gnu.org/software/glpk/">GLPK</a> for <a href="http://en.wikipedia.org/wiki/Linear_programming">linear optimization</a>, <a href="http://dcjones.github.io/Gadfly.jl">Gadfly</a> for graphing, and a few other libraries. If you haven't installed Julia, first do that. Then add all the extra requirements in the Julia shell as shown below.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;DataFrames&quot;</span><span style="color: #009900;">&#41;</span>
-Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Datetime&quot;</span><span style="color: #009900;">&#41;</span>
-Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Gadfly&quot;</span><span style="color: #009900;">&#41;</span>
-Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;JuMP&quot;</span><span style="color: #009900;">&#41;</span>
-Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;GLPKMathProgInterface&quot;</span><span style="color: #009900;">&#41;</span>
-Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;HypothesisTests&quot;</span><span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+Pkg.add("IJulia")
+Pkg.add("DataFrames")
+Pkg.add("Datetime")
+Pkg.add("Gadfly")
+Pkg.add("JuMP")
+Pkg.add("GLPKMathProgInterface")
+Pkg.add("HypothesisTests")
+</pre></div></div>
 
 <p>Alternatively, if you'd rather use an IJulia notebook for reading this post, you can download it <a href="https://raw.githubusercontent.com/ryanjoneil/adventures-in-optimization/master/published/2014-07-18-are-we-getting-happier/are-we-getting-happier.ipynb">here</a>.</p>
 
@@ -25,10 +28,12 @@ Pkg.add<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&
 
 <p>A brief inspection shows that we are not missing any data, so we don't have to merge in a list of dates with NAs.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">using DataFrames
-&nbsp;
-tmpData = readtable<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;dailyFull.csv&quot;</span><span style="color: #339933;">,</span> header=false<span style="color: #339933;">,</span> skipstart=<span style="color: #cc66cc;">1</span><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/utils/head"><span style="color: #003399; font-weight: bold;">head</span></a><span style="color: #009900;">&#40;</span>tmpData<span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+using DataFrames
+
+tmpData = readtable("dailyFull.csv", header=false, skipstart=1)
+head(tmpData)
+</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 6x2 DataFrame:
@@ -42,11 +47,13 @@ tmpData = readtable<span style="color: #009900;">&#40;</span><span style="color:
 
 <p>Note that the dates are strings. We vectorize the date constructor and use it to build a proper data frame.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">import Datetime<span style="">:</span> <a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a>
-&nbsp;
-<span style="">@</span>vectorize_1arg String <a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a>
-<a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a> = DataFrame<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a>=<a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a><span style="color: #009900;">&#40;</span>tmpData<span style="color: #009900;">&#91;</span><span style="">:</span><span style="color: #339933;">,</span> <span style="">:</span>x1<span style="color: #009900;">&#93;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> value=tmpData<span style="color: #009900;">&#91;</span><span style="">:</span><span style="color: #339933;">,</span> <span style="">:</span>x2<span style="color: #009900;">&#93;</span><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/utils/head"><span style="color: #003399; font-weight: bold;">head</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+import Datetime: date
+
+@vectorize_1arg String date
+data = DataFrame(date=date(tmpData[:, :x1]), value=tmpData[:, :x2])
+head(data)
+</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 6x2 DataFrame:
@@ -60,20 +67,22 @@ tmpData = readtable<span style="color: #009900;">&#40;</span><span style="color:
 
 <p>Let's start by making a plot of the raw data. This should look similar to the graph on their website, only not as pretty.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">using Gadfly
-&nbsp;
-set_default_plot_size<span style="color: #009900;">&#40;</span>24cm<span style="color: #339933;">,</span> 12cm<span style="color: #009900;">&#41;</span>
-colorGradient = Scale.lab_gradient<span style="color: #009900;">&#40;</span>color<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;crimson&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> color<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;blue&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> color<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;greenyellow&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/graphics/plot"><span style="color: #003399; font-weight: bold;">plot</span></a><span style="color: #009900;">&#40;</span>
-    <a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #339933;">,</span> 
-    x = <span style="color: #0000ff;">&quot;date&quot;</span><span style="color: #339933;">,</span> 
-    y = <span style="color: #0000ff;">&quot;value&quot;</span><span style="color: #339933;">,</span> 
-    color = <span style="color: #0000ff;">&quot;value&quot;</span><span style="color: #339933;">,</span> 
-    Guide.xlabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Date&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.ylabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Hedonomoeter.org Units&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.title<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Average Happiness on Twitter&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
-    Scale.ContinuousColorScale<span style="color: #009900;">&#40;</span>colorGradient<span style="color: #009900;">&#41;</span>
-<span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+using Gadfly
+
+set_default_plot_size(24cm, 12cm)
+colorGradient = Scale.lab_gradient(color("crimson"), color("blue"), color("greenyellow"))
+plot(
+    data, 
+    x = "date", 
+    y = "value", 
+    color = "value", 
+    Guide.xlabel("Date"), 
+    Guide.ylabel("Hedonomoeter.org Units"), 
+    Guide.title("Average Happiness on Twitter"),
+    Scale.ContinuousColorScale(colorGradient)
+)
+</pre></div></div>
 
 <svg xmlns="http://www.w3.org/2000/svg"
 
@@ -2371,75 +2380,68 @@ colorGradient = Scale.lab_gradient<span style="color: #009900;">&#40;</span>colo
 
 <p>Minimizing the sum of those residuals gives us a set of eight coefficients for the model. We return these and a function that predicts the happiness level for an offset from the first data record. (Note that the first record appears to be from Wednesday, September 10, 2008.)</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">using JuMP
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+using JuMP
 using GLPKMathProgInterface
-&nbsp;
-<a href="http://inside-r.org/r-doc/base/function"><span style="color: #003399; font-weight: bold;">function</span></a> buildPredictor<span style="color: #009900;">&#40;</span>d<span style="color: #009900;">&#41;</span>
-    m = Model<span style="color: #009900;">&#40;</span>solver=GLPKSolverLP<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># Define a linear variable for each of our regression coefficients.</span>
-    <span style="color: #666666; font-style: italic;"># Note that by default, JuMP variables are unrestricted in sign.</span>
-    coefficientVars = Array<span style="color: #009900;">&#40;</span>Variable<span style="color: #339933;">,</span> <span style="color: #cc66cc;">8</span><span style="color: #009900;">&#41;</span>
-    <span style="color: #000000; font-weight: bold;">for</span> i = <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/length"><span style="color: #003399; font-weight: bold;">length</span></a><span style="color: #009900;">&#40;</span>coefficientVars<span style="color: #009900;">&#41;</span>
-        <span style="">@</span>defVar<span style="color: #009900;">&#40;</span>m<span style="color: #339933;">,</span> coefficient<span style="color: #009900;">&#41;</span>
-        coefficientVars<span style="color: #009900;">&#91;</span>i<span style="color: #009900;">&#93;</span> = coefficient
-    <a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># Residuals are the absolute values of the error comparing our </span>
-    <span style="color: #666666; font-style: italic;"># observed and fitted values.</span>
-    <a href="http://inside-r.org/r-doc/stats/residuals"><span style="color: #003399; font-weight: bold;">residuals</span></a> = Array<span style="color: #009900;">&#40;</span>Variable<span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span>d<span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># This builds rows for determining fitted values. The first value is</span>
-    <span style="color: #666666; font-style: italic;"># 1 since it is multiplied by our our trend line's offset. The other</span>
-    <span style="color: #666666; font-style: italic;"># values correpond to the trends described above. Sinusoidal elements</span>
-    <span style="color: #666666; font-style: italic;"># have two variables with sine and cosine terms.</span>
-    <a href="http://inside-r.org/r-doc/base/function"><span style="color: #003399; font-weight: bold;">function</span></a> buildRowConstants<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span>
-        <span style="color: #009900;">&#91;</span>
-            <span style="color: #cc66cc;">1</span><span style="color: #339933;">,</span>                           <span style="color: #666666; font-style: italic;"># Offset</span>
-            a1<span style="color: #339933;">,</span>                          <span style="color: #666666; font-style: italic;"># Daily trend</span>
-            <a href="http://inside-r.org/r-doc/base/cos"><span style="color: #003399; font-weight: bold;">cos</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">365.25</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>          <span style="color: #666666; font-style: italic;"># Seasonal variation</span>
-            <a href="http://inside-r.org/r-doc/base/sin"><span style="color: #003399; font-weight: bold;">sin</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">365.25</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>          <span style="color: #666666; font-style: italic;">#</span>
-            <a href="http://inside-r.org/r-doc/base/cos"><span style="color: #003399; font-weight: bold;">cos</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #009900;">&#40;</span><span style="color: #cc66cc;">10.66</span><span style="">*</span><span style="color: #cc66cc;">365.25</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>  <span style="color: #666666; font-style: italic;"># Solar cycle variation</span>
-            <a href="http://inside-r.org/r-doc/base/sin"><span style="color: #003399; font-weight: bold;">sin</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #009900;">&#40;</span><span style="color: #cc66cc;">10.66</span><span style="">*</span><span style="color: #cc66cc;">365.25</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>  <span style="color: #666666; font-style: italic;">#</span>
-            <a href="http://inside-r.org/r-doc/base/cos"><span style="color: #003399; font-weight: bold;">cos</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">7</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>               <span style="color: #666666; font-style: italic;"># Weekly variation</span>
-            <a href="http://inside-r.org/r-doc/base/sin"><span style="color: #003399; font-weight: bold;">sin</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">7</span><span style="color: #009900;">&#41;</span>                <span style="color: #666666; font-style: italic;">#</span>
-        <span style="color: #009900;">&#93;</span>
-    <a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># This builds a linear expression as the dot product of a row's </span>
-    <span style="color: #666666; font-style: italic;"># constants and the coefficient variables.</span>
-    buildRowExpression<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span> = <a href="http://inside-r.org/r-doc/grDevices/dot"><span style="color: #003399; font-weight: bold;">dot</span></a><span style="color: #009900;">&#40;</span>buildRowConstants<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> coefficientVars<span style="color: #009900;">&#41;</span>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># Add a variable representing the absolute value of each error.</span>
-    <span style="color: #000000; font-weight: bold;">for</span> a1 = <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span>d<span style="color: #009900;">&#41;</span>
-        <span style="">@</span>defVar<span style="color: #009900;">&#40;</span>m<span style="color: #339933;">,</span> residual <span style="">&gt;=</span> <span style="color: #cc66cc;">0</span><span style="color: #009900;">&#41;</span>
-        <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a> = buildRowExpression<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span>
-&nbsp;
-        <span style="color: #666666; font-style: italic;"># Linear way of representing residual &gt;= |observed - fitted|</span>
-        <span style="">@</span>addConstraint<span style="color: #009900;">&#40;</span>m<span style="color: #339933;">,</span> residual <span style="">&gt;=</span> <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a> <span style="">-</span> d<span style="color: #009900;">&#91;</span>a1<span style="color: #339933;">,</span><span style="">:</span>value<span style="color: #009900;">&#93;</span><span style="color: #009900;">&#41;</span>
-        <span style="">@</span>addConstraint<span style="color: #009900;">&#40;</span>m<span style="color: #339933;">,</span> residual <span style="">&gt;=</span> d<span style="color: #009900;">&#91;</span>a1<span style="color: #339933;">,</span><span style="">:</span>value<span style="color: #009900;">&#93;</span> <span style="">-</span> <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span>
-&nbsp;
-        <a href="http://inside-r.org/r-doc/stats/residuals"><span style="color: #003399; font-weight: bold;">residuals</span></a><span style="color: #009900;">&#91;</span>a1<span style="color: #009900;">&#93;</span> = residual
-    <a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># Minimize the total sum of these residuals.</span>
-        <span style="">@</span>setObjective<span style="color: #009900;">&#40;</span>m<span style="color: #339933;">,</span> Min<span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/base/sum"><span style="color: #003399; font-weight: bold;">sum</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/residuals"><span style="color: #003399; font-weight: bold;">residuals</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-    <a href="http://inside-r.org/r-doc/base/solve"><span style="color: #003399; font-weight: bold;">solve</span></a><span style="color: #009900;">&#40;</span>m<span style="color: #009900;">&#41;</span>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># Return the model coefficients and a function that predicts happiness</span>
-    <span style="color: #666666; font-style: italic;"># for a given day, by index from the start of the data set.</span>
-    <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a> = Array<span style="color: #009900;">&#40;</span>Float64<span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/base/length"><span style="color: #003399; font-weight: bold;">length</span></a><span style="color: #009900;">&#40;</span>coefficientVars<span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-    <span style="color: #000000; font-weight: bold;">for</span> i = <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/length"><span style="color: #003399; font-weight: bold;">length</span></a><span style="color: #009900;">&#40;</span>coefficientVars<span style="color: #009900;">&#41;</span>
-        <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#91;</span>i<span style="color: #009900;">&#93;</span> = getValue<span style="color: #009900;">&#40;</span>coefficientVars<span style="color: #009900;">&#91;</span>i<span style="color: #009900;">&#93;</span><span style="color: #009900;">&#41;</span>
-    <a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-    <span style="color: #666666; font-style: italic;"># And we would like our model to work over vectors.</span>
-    predictHappiness<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span> = <a href="http://inside-r.org/r-doc/grDevices/dot"><span style="color: #003399; font-weight: bold;">dot</span></a><span style="color: #009900;">&#40;</span>buildRowConstants<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#41;</span>
-    <a href="http://inside-r.org/r-doc/base/return"><span style="color: #003399; font-weight: bold;">return</span></a> <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #339933;">,</span> predictHappiness
-<a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-<a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #339933;">,</span> predictor = buildPredictor<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a></pre></div></div>
+
+function buildPredictor(d)
+    m = Model(solver=GLPKSolverLP())
+    
+    # Define a linear variable for each of our regression coefficients.
+    # Note that by default, JuMP variables are unrestricted in sign.
+    @defVar(m, coefficientVars[1:8])
+
+    # Residuals are the absolute values of the error comparing our 
+    # observed and fitted values.
+    residuals = Array(Variable, nrow(d))
+
+    # This builds rows for determining fitted values. The first value is
+    # 1 since it is multiplied by our our trend line's offset. The other
+    # values correpond to the trends described above. Sinusoidal elements
+    # have two variables with sine and cosine terms.
+    function buildRowConstants(a1)
+        [
+            1,                           # Offset
+            a1,                          # Daily trend
+            cos(2pi*a1/365.25),          # Seasonal variation
+            sin(2pi*a1/365.25),          #
+            cos(2pi*a1/(10.66*365.25)),  # Solar cycle variation
+            sin(2pi*a1/(10.66*365.25)),  #
+            cos(2pi*a1/7),               # Weekly variation
+            sin(2pi*a1/7)                #
+        ]
+    end
+    
+    # This builds a linear expression as the dot product of a row's 
+    # constants and the coefficient variables.
+    buildRowExpression(a1) = dot(buildRowConstants(a1), coefficientVars)
+
+    # Add a variable representing the absolute value of each error.
+    @defVar(m, residuals[1:nrow(d)] >= 0)
+    for a1 = 1:nrow(d)
+        fitted = buildRowExpression(a1)
+
+        # Linear way of representing residual >= |observed - fitted|
+        @addConstraint(m, residuals[a1] >= fitted - d[a1,:value])
+        @addConstraint(m, residuals[a1] >= d[a1,:value] - fitted)
+    end
+
+    # Minimize the total sum of these residuals.
+    @setObjective(m, Min, sum(residuals))
+    solve(m)
+    
+    # Return the model coefficients and a function that predicts happiness
+    # for a given day, by index from the start of the data set.
+    coefficients = getValue(coefficientVars)[:]
+    
+    # And we would like our model to work over vectors.
+    predictHappiness(a1) = dot(buildRowConstants(a1), coefficients)
+    return coefficients, predictHappiness
+end
+
+coefficients, predictor = buildPredictor(data)
+coefficients
+</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 8-element Array{Float64,1}:
@@ -2452,11 +2454,12 @@ using GLPKMathProgInterface
  -0.00210457 
  -0.0135585</pre></div></div>
 
- <p>The optimal values for $x$ are output above. The second value is the change in happiness per day. We can see from this that there does seem to be a small positive trend.</p>
+<p>The optimal values for $x$ are output above. The second value is the change in happiness per day. We can see from this that there does seem to be a small positive trend.</p>
 
- <p>We can call our predictor function to obtain the fitted happiness level for any day number starting from September 10, 2008.</p>
+<p>We can call our predictor function to obtain the fitted happiness level for any day number starting from September 10, 2008.</p>
 
- <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">predictor<span style="color: #009900;">&#40;</span><span style="color: #cc66cc;">1000</span><span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+predictor(1000)</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 6.011059321544039</pre></div></div>
@@ -2469,14 +2472,16 @@ using GLPKMathProgInterface
 
 <p>First step: compute the errors between the observed and fitted data. We'll construct a new data frame that contains everything we need to construct fake data.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;"><span style="color: #666666; font-style: italic;"># Compute fitted data corresponding to our observations and their associated errors.</span>
-<a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a> = DataFrame<span style="color: #009900;">&#40;</span>
-    <a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a> = <a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#91;</span><span style="">:</span><span style="color: #339933;">,</span> <span style="">:</span><a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a><span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span> 
-    observed = <a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#91;</span><span style="">:</span><span style="color: #339933;">,</span> <span style="">:</span>value<span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span>
-    <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a> = map<span style="color: #009900;">&#40;</span>x <span style="">-&gt;</span> predictor<span style="color: #009900;">&#40;</span>x<span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
-    error = map<span style="color: #009900;">&#40;</span>x <span style="">-&gt;</span> predictor<span style="color: #009900;">&#40;</span>x<span style="color: #009900;">&#41;</span> <span style="">-</span> <a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#91;</span>x<span style="color: #339933;">,</span> <span style="">:</span>value<span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/utils/data"><span style="color: #003399; font-weight: bold;">data</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-<span style="color: #009900;">&#41;</span>
-describe<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+# Compute fitted data corresponding to our observations and their associated errors.
+fitted = DataFrame(
+    date = data[:, :date], 
+    observed = data[:, :value],
+    fitted = map(x -> predictor(x), 1:nrow(data)),
+    error = map(x -> predictor(x) - data[x, :value], 1:nrow(data))
+)
+describe(fitted)
+</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 date
@@ -2520,25 +2525,27 @@ NA%      0.0%</pre></div></div>
 
 <p>Now we build a function that creates a fake input data set using the fitted values with randomonly selected errors. That is, for each observation, we add a randomly selected error with replacement to its corresponding fitted value. Once we've done that for every observation, we have a complete fake data set.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;"><a href="http://inside-r.org/r-doc/base/function"><span style="color: #003399; font-weight: bold;">function</span></a> buildFakeData<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span>
-    errorIndexes = rand<span style="color: #009900;">&#40;</span><span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-    DataFrame<span style="color: #009900;">&#40;</span>
-        <a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a> = <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#91;</span><span style="">:</span><span style="color: #339933;">,</span> <span style="">:</span><a href="http://inside-r.org/r-doc/base/date"><span style="color: #003399; font-weight: bold;">date</span></a><span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span>
-        value = map<span style="color: #009900;">&#40;</span>x <span style="">-&gt;</span> <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#91;</span>x<span style="color: #339933;">,</span> <span style="">:</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#93;</span> <span style="">-</span> <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#91;</span>errorIndexes<span style="color: #009900;">&#91;</span>x<span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span> <span style="">:</span>error<span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/nrow"><span style="color: #003399; font-weight: bold;">nrow</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-    <span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-&nbsp;
-<span style="color: #666666; font-style: italic;"># Plot some fake data to see if it looks similar.</span>
-<a href="http://inside-r.org/r-doc/graphics/plot"><span style="color: #003399; font-weight: bold;">plot</span></a><span style="color: #009900;">&#40;</span>
-    buildFakeData<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    x = <span style="color: #0000ff;">&quot;date&quot;</span><span style="color: #339933;">,</span> 
-    y = <span style="color: #0000ff;">&quot;value&quot;</span><span style="color: #339933;">,</span> 
-    color = <span style="color: #0000ff;">&quot;value&quot;</span><span style="color: #339933;">,</span> 
-    Guide.xlabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Date&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.ylabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Hedonomoeter.org Units&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.title<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Average Happiness on Twitter (Fake)&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
-    Scale.ContinuousColorScale<span style="color: #009900;">&#40;</span>colorGradient<span style="color: #009900;">&#41;</span>
-<span style="color: #009900;">&#41;</span></pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+function buildFakeData(fitted)
+    errorIndexes = rand(1:nrow(fitted), nrow(fitted))
+    DataFrame(
+        date = fitted[:, :date],
+        value = map(x -> fitted[x, :fitted] - fitted[errorIndexes[x], :error], 1:nrow(fitted))
+    )
+end
+
+# Plot some fake data to see if it looks similar.
+plot(
+    buildFakeData(fitted), 
+    x = "date", 
+    y = "value", 
+    color = "value", 
+    Guide.xlabel("Date"), 
+    Guide.ylabel("Hedonomoeter.org Units"), 
+    Guide.title("Average Happiness on Twitter (Fake)"),
+    Scale.ContinuousColorScale(colorGradient)
+)
+</pre></div></div>
 
 <svg xmlns="http://www.w3.org/2000/svg"
 
@@ -4811,16 +4818,18 @@ NA%      0.0%</pre></div></div>
 
 <p>The following code took just under an hour on my machine. If you're intent on running it yourself, you may want to get some coffee or a beer in the meantime.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">using HypothesisTests
-&nbsp;
-coeffData = <span style="color: #009900;">&#91;</span>buildPredictor<span style="color: #009900;">&#40;</span>buildFakeData<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#91;</span><span style="color: #cc66cc;">1</span><span style="color: #009900;">&#93;</span> <span style="color: #000000; font-weight: bold;">for</span> i = <span style="color: #cc66cc;">1</span><span style="">:</span><span style="color: #cc66cc;">1000</span><span style="color: #009900;">&#93;</span>
-confidence2Sigma = Array<span style="color: #009900;">&#40;</span><span style="color: #009900;">&#40;</span>Float64<span style="color: #339933;">,</span> Float64<span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> <a href="http://inside-r.org/r-doc/base/length"><span style="color: #003399; font-weight: bold;">length</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-<span style="color: #000000; font-weight: bold;">for</span> i = <span style="color: #cc66cc;">1</span><span style="">:</span><a href="http://inside-r.org/r-doc/base/length"><span style="color: #003399; font-weight: bold;">length</span></a><span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#41;</span>
-    <a href="http://inside-r.org/r-doc/base/sample"><span style="color: #003399; font-weight: bold;">sample</span></a><span style="">::</span>Array<span style="color: #009900;">&#123;</span>Float64<span style="color: #009900;">&#125;</span>
-    <a href="http://inside-r.org/r-doc/base/sample"><span style="color: #003399; font-weight: bold;">sample</span></a> = <span style="color: #009900;">&#91;</span>x<span style="color: #009900;">&#91;</span>i<span style="color: #009900;">&#93;</span> <span style="color: #000000; font-weight: bold;">for</span> x <span style="color: #000000; font-weight: bold;">in</span> coeffData<span style="color: #009900;">&#93;</span>
-    confidence2Sigma<span style="color: #009900;">&#91;</span>i<span style="color: #009900;">&#93;</span> = ci<span style="color: #009900;">&#40;</span>OneSampleTTest<span style="color: #009900;">&#40;</span><a href="http://inside-r.org/r-doc/base/sample"><span style="color: #003399; font-weight: bold;">sample</span></a><span style="color: #009900;">&#41;</span><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/stats/end"><span style="color: #003399; font-weight: bold;">end</span></a>
-confidence2Sigma</pre></div></div>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+using HypothesisTests
+
+coeffData = [buildPredictor(buildFakeData(fitted))[1] for i = 1:1000]
+confidence2Sigma = Array((Float64, Float64), length(coefficients))
+for i = 1:length(coefficients)
+    sample::Array{Float64}
+    sample = [x[i] for x in coeffData]
+    confidence2Sigma[i] = ci(OneSampleTTest(sample))
+end
+confidence2Sigma
+</pre></div></div>
 
 <div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
 8-element Array{(Float64,Float64),1}:
@@ -4839,15 +4848,17 @@ confidence2Sigma</pre></div></div>
 
 <p>Now we take a quick look at our model output. First, we plot the fitted happiness values for the same time period as the observed data. We can see that this resembles the same general trend minus the outliers. The width of the curve is due to weekly variation.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;"><a href="http://inside-r.org/r-doc/graphics/plot"><span style="color: #003399; font-weight: bold;">plot</span></a><span style="color: #009900;">&#40;</span>
-    <a href="http://inside-r.org/r-doc/stats/fitted"><span style="color: #003399; font-weight: bold;">fitted</span></a><span style="color: #339933;">,</span>
-    x = <span style="color: #0000ff;">&quot;date&quot;</span><span style="color: #339933;">,</span>
-    y = <span style="color: #0000ff;">&quot;fitted&quot;</span><span style="color: #339933;">,</span>
-    Guide.xlabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Date&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.ylabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Hedonomoeter.org Units&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.title<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Expected Happiness on Twitter&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+plot(
+    fitted,
+    x = "date",
+    y = "fitted",
+    Guide.xlabel("Date"), 
+    Guide.ylabel("Hedonomoeter.org Units"), 
+    Guide.title("Expected Happiness on Twitter"),
     Geom.line
-<span style="color: #009900;">&#41;</span></pre></div></div>
+)
+</pre></div></div>
 
 <svg xmlns="http://www.w3.org/2000/svg"
 
@@ -4926,16 +4937,18 @@ confidence2Sigma</pre></div></div>
 
 <p>Now we take a look at what a typical week looks like in terms of its effect on our happiness. As September 10, 2008 was a Wednesday, we index Sunday starting at 5. The resulting graph highlights what I think we all already know about the work week.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">daily<span style="color: #009900;">&#40;</span>a1<span style="color: #009900;">&#41;</span> = <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#91;</span><span style="color: #cc66cc;">6</span><span style="color: #009900;">&#93;</span><span style="">*</span><a href="http://inside-r.org/r-doc/base/cos"><span style="color: #003399; font-weight: bold;">cos</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">7</span><span style="color: #009900;">&#41;</span> <span style="">+</span> <a href="http://inside-r.org/r-doc/stats/coefficients"><span style="color: #003399; font-weight: bold;">coefficients</span></a><span style="color: #009900;">&#91;</span><span style="color: #cc66cc;">7</span><span style="color: #009900;">&#93;</span><span style="">*</span><a href="http://inside-r.org/r-doc/base/sin"><span style="color: #003399; font-weight: bold;">sin</span></a><span style="color: #009900;">&#40;</span>2pi<span style="">*</span>a1<span style="">/</span><span style="color: #cc66cc;">7</span><span style="color: #009900;">&#41;</span>
-<a href="http://inside-r.org/r-doc/graphics/plot"><span style="color: #003399; font-weight: bold;">plot</span></a><span style="color: #009900;">&#40;</span>
-    x = <span style="color: #009900;">&#91;</span><span style="color: #0000ff;">&quot;Sun&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Mon&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Tues&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Wed&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Thurs&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Fri&quot;</span><span style="color: #339933;">,</span> <span style="color: #0000ff;">&quot;Sat&quot;</span><span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span> 
-    y = map<span style="color: #009900;">&#40;</span>daily<span style="color: #339933;">,</span> <span style="color: #009900;">&#91;</span><span style="color: #cc66cc;">5</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">6</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">7</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">1</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">2</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">3</span><span style="color: #339933;">,</span> <span style="color: #cc66cc;">4</span><span style="color: #009900;">&#93;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
-    Guide.xlabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Day of the Week&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.ylabel<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Hedonomoeter.org Units&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span> 
-    Guide.title<span style="color: #009900;">&#40;</span><span style="color: #0000ff;">&quot;Variation in Happiness on Twitter Due to Day of the Week&quot;</span><span style="color: #009900;">&#41;</span><span style="color: #339933;">,</span>
-    Geom.line<span style="color: #339933;">,</span>
+<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+daily(a1) = coefficients[6]*cos(2pi*a1/7) + coefficients[7]*sin(2pi*a1/7)
+plot(
+    x = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"], 
+    y = map(daily, [5, 6, 7, 1, 2, 3, 4]),
+    Guide.xlabel("Day of the Week"), 
+    Guide.ylabel("Hedonomoeter.org Units"), 
+    Guide.title("Variation in Happiness on Twitter Due to Day of the Week"),
+    Geom.line,
     Geom.point
-<span style="color: #009900;">&#41;</span></pre></div></div>
+)
+</pre></div></div>
 
 <svg xmlns="http://www.w3.org/2000/svg"
 
