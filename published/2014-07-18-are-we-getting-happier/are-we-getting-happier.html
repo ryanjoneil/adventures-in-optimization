@@ -35,7 +35,7 @@ tmpData = readtable("dailyFull.csv", header=false, skipstart=1)
 head(tmpData)
 </pre>
 
-<pre class="prettyprint">
+<pre>
 6x2 DataFrame:
                   x1      x2
 [1,]    "2008-09-10" 6.01006
@@ -56,7 +56,7 @@ data = DataFrame(date=date(tmpData[:, :x1]), value=tmpData[:, :x2])
 head(data)
 </pre>
 
-<pre class="prettyprint">
+<pre>
 6x2 DataFrame:
               date   value
 [1,]    2008-09-10 6.01006
@@ -182,7 +182,7 @@ coefficients, predictor = buildPredictor(data)
 coefficients
 </pre>
 
-<pre class="prettyprint">
+<pre>
 8-element Array{Float64,1}:
   5.92575    
   9.88082e-5 
@@ -202,7 +202,7 @@ coefficients
 predictor(1000)
 </pre>
 
-<pre class="prettyprint">
+<pre>
 6.011059321544039
 </pre>
 
@@ -225,7 +225,7 @@ fitted = DataFrame(
 describe(fitted)
 </pre>
 
-<pre class="prettyprint">
+<pre>
 date
 Length  2120
 Type    Date{ISOCalendar}
@@ -311,7 +311,7 @@ end
 confidence2Sigma
 </pre>
 
-<pre class="prettyprint">
+<pre>
 8-element Array{(Float64,Float64),1}:
  (5.925619370480642,5.926250874471983)          
  (9.833341267642056e-5,9.891872644950681e-5)    
