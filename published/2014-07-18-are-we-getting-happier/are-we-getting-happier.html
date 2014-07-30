@@ -4,11 +4,11 @@
 
 <p>Hedonometer.org popped onto my radar a couple weeks ago. It's a nifty project, attempting to convert samples of words found in the Twitter Gardenhose feed into a time series of happiness.</p>
 
-<p>While I'm not a computational social scientist, I must say the data does have a nice intuitive quality to it. There are obvious trends in happiness associated with major holidays, days of the week, and seasons. It seems like the sort of data that could be decomposed into trends based on those various components. The Hedonometer group has, of course, done extensive analyses of their own data which you can find on <a href="http://www.hedonometer.org/papers.html">their papers page</a>.
+<p>While I'm not a computational social scientist, I must say the data does have a nice intuitive quality to it. There are obvious trends in happiness associated with major holidays, days of the week, and seasons. It seems like the sort of data that could be decomposed into trends based on those various components. The Hedonometer group has, of course, done extensive analyses of their own data which you can find on <a href="http://www.hedonometer.org/papers.html">their papers page</a>.</p>
 
 <p>This post examines another approach. It follows the structure of <a href="<http://www.princeton.edu/vanderbei/">Robert Vanderbei</a>'s excellent "<a href="http://epubs.siam.org/doi/pdf/10.1137/110827296">Local Warming</a>" project to separate out the Hedonometer averages into daily, seasonal, solar, and day-of-the-week trends. We'll be using <a href="http://julialang.org/">Julia</a> v0.2 with <a href="https://github.com/JuliaOpt/JuMP.jl">JuMP</a> and <a href="http://www.gnu.org/software/glpk/">GLPK</a> for <a href="http://en.wikipedia.org/wiki/Linear_programming">linear optimization</a>, <a href="http://dcjones.github.io/Gadfly.jl">Gadfly</a> for graphing, and a few other libraries. If you haven't installed Julia, first do that. Then add all the extra requirements in the Julia shell as shown below.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 Pkg.add("IJulia")
 Pkg.add("DataFrames")
 Pkg.add("Datetime")
@@ -16,7 +16,7 @@ Pkg.add("Gadfly")
 Pkg.add("JuMP")
 Pkg.add("GLPKMathProgInterface")
 Pkg.add("HypothesisTests")
-</pre></div></div>
+</pre>
 
 <p>Alternatively, if you'd rather use an IJulia notebook for reading this post, you can download it <a href="https://raw.githubusercontent.com/ryanjoneil/adventures-in-optimization/master/published/2014-07-18-are-we-getting-happier/are-we-getting-happier.ipynb">here</a>.</p>
 
@@ -28,14 +28,14 @@ Pkg.add("HypothesisTests")
 
 <p>A brief inspection shows that we are not missing any data, so we don't have to merge in a list of dates with NAs.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 using DataFrames
 
 tmpData = readtable("dailyFull.csv", header=false, skipstart=1)
 head(tmpData)
-</pre></div></div>
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 6x2 DataFrame:
                   x1      x2
 [1,]    "2008-09-10" 6.01006
@@ -43,19 +43,20 @@ head(tmpData)
 [3,]    "2008-09-12" 6.01726
 [4,]    "2008-09-13" 6.02889
 [5,]    "2008-09-14" 6.03155
-[6,]    "2008-09-15" 5.98864</pre></div></div>
+[6,]    "2008-09-15" 5.98864
+</pre>
 
 <p>Note that the dates are strings. We vectorize the date constructor and use it to build a proper data frame.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 import Datetime: date
 
 @vectorize_1arg String date
 data = DataFrame(date=date(tmpData[:, :x1]), value=tmpData[:, :x2])
 head(data)
-</pre></div></div>
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 6x2 DataFrame:
               date   value
 [1,]    2008-09-10 6.01006
@@ -63,11 +64,12 @@ head(data)
 [3,]    2008-09-12 6.01726
 [4,]    2008-09-13 6.02889
 [5,]    2008-09-14 6.03155
-[6,]    2008-09-15 5.98864</pre></div></div>    
+[6,]    2008-09-15 5.98864
+</pre>
 
 <p>Let's start by making a plot of the raw data. This should look similar to the graph on their website, only not as pretty.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 using Gadfly
 
 set_default_plot_size(24cm, 12cm)
@@ -82,9 +84,9 @@ plot(
     Guide.title("Average Happiness on Twitter"),
     Scale.ContinuousColorScale(colorGradient)
 )
-</pre></div></div>
+</pre>
 
-<p>IMAGE 1</p>
+<div class="separator" style="clear: both; text-align: center;"><a href="http://2.bp.blogspot.com/-aVzbl2XeTHo/U9kVqsXUfRI/AAAAAAAADK0/95w5IhCC_kI/s1600/output_11_0.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://2.bp.blogspot.com/-aVzbl2XeTHo/U9kVqsXUfRI/AAAAAAAADK0/95w5IhCC_kI/s1600/output_11_0.png" /></a></div>
 
 <p>The data looks right, so we're off to a good start. Now we have to think about what sort of components we believe are important factors to this index. We'll start with the same ones as in the Vanderbei model:</p>
 
@@ -117,7 +119,7 @@ plot(
 
 <p>Minimizing the sum of those residuals gives us a set of eight coefficients for the model. We return these and a function that predicts the happiness level for an offset from the first data record. (Note that the first record appears to be from Wednesday, September 10, 2008.)</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 using JuMP
 using GLPKMathProgInterface
 
@@ -178,9 +180,9 @@ end
 
 coefficients, predictor = buildPredictor(data)
 coefficients
-</pre></div></div>
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 8-element Array{Float64,1}:
   5.92575    
   9.88082e-5 
@@ -189,17 +191,20 @@ coefficients
   0.125979   
  -0.0184735  
  -0.00210457 
- -0.0135585</pre></div></div>
+ -0.0135585
+ </pre>
 
 <p>The optimal values for $x$ are output above. The second value is the change in happiness per day. We can see from this that there does seem to be a small positive trend.</p>
 
 <p>We can call our predictor function to obtain the fitted happiness level for any day number starting from September 10, 2008.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
-predictor(1000)</pre></div></div>
+<pre class="prettyprint">
+predictor(1000)
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
-6.011059321544039</pre></div></div>
+<pre class="prettyprint">
+6.011059321544039
+</pre>
 
 <h4>Confidence Intervals</h4>
 
@@ -209,7 +214,7 @@ predictor(1000)</pre></div></div>
 
 <p>First step: compute the errors between the observed and fitted data. We'll construct a new data frame that contains everything we need to construct fake data.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 # Compute fitted data corresponding to our observations and their associated errors.
 fitted = DataFrame(
     date = data[:, :date], 
@@ -218,9 +223,9 @@ fitted = DataFrame(
     error = map(x -> predictor(x) - data[x, :value], 1:nrow(data))
 )
 describe(fitted)
-</pre></div></div>
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 date
 Length  2120
 Type    Date{ISOCalendar}
@@ -256,13 +261,14 @@ Mean     -0.002588405978665409
 3rd Qu.  0.011507686354999658
 Max      0.13504237942082575
 NAs      0
-NA%      0.0%</pre></div></div>
+NA%      0.0%
+</pre>
 
 <p>Note that the median for our errors is exactly zero. This is a good sign.</p>
 
 <p>Now we build a function that creates a fake input data set using the fitted values with randomonly selected errors. That is, for each observation, we add a randomly selected error with replacement to its corresponding fitted value. Once we've done that for every observation, we have a complete fake data set.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 function buildFakeData(fitted)
     errorIndexes = rand(1:nrow(fitted), nrow(fitted))
     DataFrame(
@@ -282,9 +288,9 @@ plot(
     Guide.title("Average Happiness on Twitter (Fake)"),
     Scale.ContinuousColorScale(colorGradient)
 )
-</pre></div></div>
+</pre>
 
-<p>IMAGE 2</p>
+<div class="separator" style="clear: both; text-align: center;"><a href="http://3.bp.blogspot.com/-pMgrkcX7iJw/U9kV1Mx1IpI/AAAAAAAADK8/C5KnkWzeACc/s1600/output_22_0.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://3.bp.blogspot.com/-pMgrkcX7iJw/U9kV1Mx1IpI/AAAAAAAADK8/C5KnkWzeACc/s1600/output_22_0.png" /></a></div>
 
 <p>Visually, the plot of an arbitrary fake data set looks a lot like our original data, but not exactly.</p>
 
@@ -292,7 +298,7 @@ plot(
 
 <p>The following code took just under an hour on my machine. If you're intent on running it yourself, you may want to get some coffee or a beer in the meantime.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 using HypothesisTests
 
 coeffData = [buildPredictor(buildFakeData(fitted))[1] for i = 1:1000]
@@ -303,9 +309,9 @@ for i = 1:length(coefficients)
     confidence2Sigma[i] = ci(OneSampleTTest(sample))
 end
 confidence2Sigma
-</pre></div></div>
+</pre>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 8-element Array{(Float64,Float64),1}:
  (5.925619370480642,5.926250874471983)          
  (9.833341267642056e-5,9.891872644950681e-5)    
@@ -314,7 +320,8 @@ confidence2Sigma
  (0.12556589790988862,0.12604831225962906)      
  (-0.018511935408237066,-0.018348960520221922)  
  (-0.002133611417832446,-0.002058047348615918)  
- (-0.01359168539278434,-0.01351903662344336)</pre></div></div>
+ (-0.01359168539278434,-0.01351903662344336)
+</pre>
 
 <h4>Results</h4>
 
@@ -322,7 +329,7 @@ confidence2Sigma
 
 <p>Now we take a quick look at our model output. First, we plot the fitted happiness values for the same time period as the observed data. We can see that this resembles the same general trend minus the outliers. The width of the curve is due to weekly variation.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 plot(
     fitted,
     x = "date",
@@ -332,13 +339,13 @@ plot(
     Guide.title("Expected Happiness on Twitter"),
     Geom.line
 )
-</pre></div></div>
+</pre>
 
-<p>IMAGE 3</p>
+<div class="separator" style="clear: both; text-align: center;"><a href="http://3.bp.blogspot.com/-Qyr3V2qrYCs/U9kWCF3iyqI/AAAAAAAADLE/EzuoiSjITLk/s1600/output_27_0.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://3.bp.blogspot.com/-Qyr3V2qrYCs/U9kWCF3iyqI/AAAAAAAADLE/EzuoiSjITLk/s1600/output_27_0.png" /></a></div>
 
 <p>Now we take a look at what a typical week looks like in terms of its effect on our happiness. As September 10, 2008 was a Wednesday, we index Sunday starting at 5. The resulting graph highlights what I think we all already know about the work week.</p>
 
-<div style="overflow:auto;"><div class="geshifilter"><pre class="r geshifilter-R" style="font-family:monospace;">
+<pre class="prettyprint">
 daily(a1) = coefficients[6]*cos(2pi*a1/7) + coefficients[7]*sin(2pi*a1/7)
 plot(
     x = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"], 
@@ -349,9 +356,9 @@ plot(
     Geom.line,
     Geom.point
 )
-</pre></div></div>
+</pre>
 
-<p>Image 4</p>
+<div class="separator" style="clear: both; text-align: center;"><a href="http://4.bp.blogspot.com/-xfmXhvmu8D4/U9kWG0I-FkI/AAAAAAAADLM/Nfd0beKtvOM/s1600/output_29_0.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://4.bp.blogspot.com/-xfmXhvmu8D4/U9kWG0I-FkI/AAAAAAAADLM/Nfd0beKtvOM/s1600/output_29_0.png" /></a></div>
 
 <p>That's it for this analysis. We've learned that, for the being at least, we seem to be trending happier. Which is pretty cool. Of course, 6 years is not a huge amount of time for this sort of data. Let's try doing the analysis again in 10 or 20.</p>
 
