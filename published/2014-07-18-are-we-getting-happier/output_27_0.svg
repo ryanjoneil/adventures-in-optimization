@@ -1,12 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink"
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg xmlns="http://www.w3.org/2000/svg"
+
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+
      xmlns:gadfly="http://www.gadflyjl.org/ns"
-     version="1.2"
-     width="240mm" height="120mm" viewBox="0 0 240 120"
-     stroke="none"
-     fill="#000000"
-     stroke-width="0.3"
+     version="1.2"
+
+     width="200mm" height="120mm" viewBox="0 0 240 120"
+
+     stroke="none"
+
+     fill="#000000"
+
+     stroke-width="0.3"
+
 >
 <g class="plotroot xscalable yscalable" id="fig-5f341cca0e9a44b6a908ae7af94ea170-element-1">
   <g font-size="3.88" font-family="'PT Sans','Helvetica Neue','Helvetica',sans-serif" fill="#564A55" stroke="none" id="fig-5f341cca0e9a44b6a908ae7af94ea170-element-2">
